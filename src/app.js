@@ -6,15 +6,26 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
-// Soma JSON requests.
+// ==================================================
+// 1. DATA API ROUTES
+// ==================================================
+const dataRoutes = require('./routes/data.routes');
+
+// ==================================================
+// 2. JSON REQUESTS
+// ==================================================
 app.use(express.json({
     limit: '100kb'
 }));
 
-// Vichwa vya msingi vya usalama.
+// ==================================================
+// 3. VICHWA VYA USALAMA
+// ==================================================
 app.use(helmet());
 
-// Punguza maombi mengi kupita kiasi.
+// ==================================================
+// 4. KUPUNGUZA MAOMBI MENGI
+// ==================================================
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 200,
@@ -28,7 +39,9 @@ const generalLimiter = rateLimit({
 
 app.use('/api/', generalLimiter);
 
-// Taarifa za API.
+// ==================================================
+// 5. TAARIFA ZA API
+// ==================================================
 app.get('/api', (req, res) => {
     res.status(200).json({
         success: true,
@@ -38,7 +51,9 @@ app.get('/api', (req, res) => {
     });
 });
 
-// Health check.
+// ==================================================
+// 6. HEALTH CHECK
+// ==================================================
 app.get('/health', (req, res) => {
     res.status(200).json({
         success: true,
@@ -47,7 +62,22 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Njia isiyopatikana.
+// ==================================================
+// 7. DATA API
+// ==================================================
+// GET    /api/data       - Soma data za umma
+// GET    /api/data/mine  - Soma data zako
+// POST   /api/data       - Ongeza data
+// PATCH  /api/data/:id   - Hariri data yako
+// DELETE /api/data/:id   - Futa data yako
+//
+// Ulinzi wa kuingia na umiliki wa data
+// unashughulikiwa kwenye data.routes.js.
+app.use('/api/data', dataRoutes);
+
+// ==================================================
+// 8. NJIA ISIYOPATIKANA
+// ==================================================
 app.use((req, res) => {
     res.status(404).json({
         success: false,
@@ -55,12 +85,16 @@ app.use((req, res) => {
     });
 });
 
-// Kushughulikia makosa.
+// ==================================================
+// 9. KUSHUGHULIKIA MAKOSA
+// ==================================================
 app.use((err, req, res, next) => {
+
     if (res.headersSent) {
         return next(err);
     }
 
+    // JSON isiyo sahihi
     if (err.type === 'entity.parse.failed') {
         return res.status(400).json({
             success: false,
@@ -68,6 +102,7 @@ app.use((err, req, res, next) => {
         });
     }
 
+    // Data imezidi kiwango
     if (err.type === 'entity.too.large') {
         return res.status(413).json({
             success: false,
@@ -75,14 +110,19 @@ app.use((err, req, res, next) => {
         });
     }
 
+    // Rekodi ya hitilafu kwa mazingira ya development
     if (process.env.NODE_ENV !== 'production') {
-        console.error('Backend error:', err.message);
+        console.error('Backend error:', err);
     }
 
+    // Ujumbe wa jumla usiofichua taarifa za ndani
     return res.status(500).json({
         success: false,
         message: 'Hitilafu ya ndani ya server imetokea.'
     });
 });
 
+// ==================================================
+// 10. EXPORT APP
+// ==================================================
 module.exports = app;
