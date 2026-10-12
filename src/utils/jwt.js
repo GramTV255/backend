@@ -3,33 +3,48 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('node:crypto');
 
+// =====================================================
+// 1. TOKEN CONFIGURATION
+// =====================================================
+
 const ACCESS_EXPIRES_IN =
     process.env.JWT_ACCESS_EXPIRES_IN || '15m';
 
 const REFRESH_EXPIRES_IN =
     process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
+const JWT_ISSUER = 'backend';
+const JWT_AUDIENCE = 'backend-android';
+
+// =====================================================
+// 2. VALIDATE JWT SECRET
+// =====================================================
+
 function getSecret(name) {
     const secret = process.env[name];
 
     if (
         typeof secret !== 'string' ||
-        secret.length < 32
+        Buffer.byteLength(secret, 'utf8') < 32
     ) {
         throw new Error(
-            `${name} haijawekwa vizuri. Tumia siri yenye angalau herufi 32.`
+            `${name} haijawekwa vizuri. ` +
+            'Tumia siri yenye angalau bytes 32.'
         );
     }
 
     return secret;
 }
 
-/**
- * Tengeneza Access Token.
- */
+// =====================================================
+// 3. CREATE ACCESS TOKEN
+// =====================================================
+
 function createAccessToken(user) {
     if (!user || !user.id) {
-        throw new Error('Taarifa za mtumiaji hazijakamilika.');
+        throw new Error(
+            'Taarifa za mtumiaji hazijakamilika.'
+        );
     }
 
     const secret = getSecret('JWT_ACCESS_SECRET');
@@ -44,21 +59,21 @@ function createAccessToken(user) {
             algorithm: 'HS256',
             subject: String(user.id),
             expiresIn: ACCESS_EXPIRES_IN,
-            issuer: 'backend',
-            audience: 'backend-android'
+            issuer: JWT_ISSUER,
+            audience: JWT_AUDIENCE
         }
     );
 }
 
-/**
- * Tengeneza Refresh Token ya JWT.
- *
- * Token hii itahitaji pia kuhifadhiwa kama hash kwenye
- * refresh_tokens ili iweze kufutwa au kubatilishwa.
- */
+// =====================================================
+// 4. CREATE REFRESH TOKEN
+// =====================================================
+
 function createRefreshToken(user) {
     if (!user || !user.id) {
-        throw new Error('Taarifa za mtumiaji hazijakamilika.');
+        throw new Error(
+            'Taarifa za mtumiaji hazijakamilika.'
+        );
     }
 
     const secret = getSecret('JWT_REFRESH_SECRET');
@@ -75,8 +90,8 @@ function createRefreshToken(user) {
             subject: String(user.id),
             jwtid: tokenId,
             expiresIn: REFRESH_EXPIRES_IN,
-            issuer: 'backend',
-            audience: 'backend-android'
+            issuer: JWT_ISSUER,
+            audience: JWT_AUDIENCE
         }
     );
 
@@ -86,47 +101,68 @@ function createRefreshToken(user) {
     };
 }
 
-/**
- * Thibitisha Access Token.
- */
+// =====================================================
+// 5. VERIFY ACCESS TOKEN
+// =====================================================
+
 function verifyAccessToken(token) {
+    if (typeof token !== 'string' || !token) {
+        throw new Error('Access Token inahitajika.');
+    }
+
     const secret = getSecret('JWT_ACCESS_SECRET');
 
     const payload = jwt.verify(token, secret, {
         algorithms: ['HS256'],
-        issuer: 'backend',
-        audience: 'backend-android'
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE
     });
 
-    if (payload.type !== 'access' || !payload.sub) {
+    if (
+        !payload ||
+        payload.type !== 'access' ||
+        !payload.sub ||
+        !payload.exp
+    ) {
         throw new Error('Access Token si sahihi.');
     }
 
     return payload;
 }
 
-/**
- * Thibitisha Refresh Token.
- */
+// =====================================================
+// 6. VERIFY REFRESH TOKEN
+// =====================================================
+
 function verifyRefreshToken(token) {
+    if (typeof token !== 'string' || !token) {
+        throw new Error('Refresh Token inahitajika.');
+    }
+
     const secret = getSecret('JWT_REFRESH_SECRET');
 
     const payload = jwt.verify(token, secret, {
         algorithms: ['HS256'],
-        issuer: 'backend',
-        audience: 'backend-android'
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE
     });
 
     if (
+        !payload ||
         payload.type !== 'refresh' ||
         !payload.sub ||
-        !payload.jti
+        !payload.jti ||
+        !payload.exp
     ) {
         throw new Error('Refresh Token si sahihi.');
     }
 
     return payload;
 }
+
+// =====================================================
+// 7. EXPORT FUNCTIONS
+// =====================================================
 
 module.exports = {
     createAccessToken,
