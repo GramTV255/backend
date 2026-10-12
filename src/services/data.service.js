@@ -6,8 +6,21 @@ const { generateId } = require('../utils/crypto');
 const ALLOWED_VISIBILITY = ['public', 'private'];
 
 /**
- * Kusoma data za umma.
- * Hakuhitaji login.
+ * Kuhakikisha content ni JSON object halali.
+ */
+function validateContent(content) {
+    if (
+        content === null ||
+        typeof content !== 'object' ||
+        Array.isArray(content)
+    ) {
+        throw new Error('Content lazima iwe JSON object.');
+    }
+}
+
+/**
+ * Kusoma data za umma bila login.
+ * Data binafsi hazirudishwi.
  */
 async function getPublicData(options = {}) {
     const limit = Math.min(
@@ -23,7 +36,6 @@ async function getPublicData(options = {}) {
     const result = await pool.query(
         `SELECT
             id,
-            owner_id,
             data_type,
             title,
             content,
@@ -42,7 +54,7 @@ async function getPublicData(options = {}) {
 
 /**
  * Kusoma data za mtumiaji aliyeingia.
- * Mtumiaji atasoma data zake tu, za umma na binafsi.
+ * Mtumiaji anaona data zake tu.
  */
 async function getMyData(userId, options = {}) {
     const limit = Math.min(
@@ -77,7 +89,8 @@ async function getMyData(userId, options = {}) {
 
 /**
  * Kuongeza data mpya.
- * Owner ID hutoka kwenye mtumiaji aliyethibitishwa.
+ * Owner ID hutoka kwenye tokeni iliyothibitishwa,
+ * si kwenye data iliyotumwa na mteja.
  */
 async function createData(userId, input) {
     if (
@@ -100,7 +113,10 @@ async function createData(userId, input) {
         throw new Error('Urefu wa title au dataType si sahihi.');
     }
 
-    const visibility = input.visibility || 'public';
+    const visibility =
+        input.visibility === undefined
+            ? 'public'
+            : input.visibility;
 
     if (!ALLOWED_VISIBILITY.includes(visibility)) {
         throw new Error('Visibility si sahihi.');
@@ -109,13 +125,7 @@ async function createData(userId, input) {
     const content =
         input.content === undefined ? {} : input.content;
 
-    if (
-        content === null ||
-        typeof content !== 'object' ||
-        Array.isArray(content)
-    ) {
-        throw new Error('Content lazima iwe JSON object.');
-    }
+    validateContent(content);
 
     const id = generateId();
 
@@ -152,10 +162,14 @@ async function createData(userId, input) {
 }
 
 /**
- * Kuhariri data za mtumiaji mwenyewe tu.
+ * Kuhariri data za mmiliki pekee.
  */
 async function updateMyData(userId, dataId, input) {
-    if (!input || typeof input !== 'object') {
+    if (
+        !input ||
+        typeof input !== 'object' ||
+        Array.isArray(input)
+    ) {
         throw new Error('Taarifa za mabadiliko si sahihi.');
     }
 
@@ -192,13 +206,7 @@ async function updateMyData(userId, dataId, input) {
     }
 
     if (input.content !== undefined) {
-        if (
-            input.content === null ||
-            typeof input.content !== 'object' ||
-            Array.isArray(input.content)
-        ) {
-            throw new Error('Content lazima iwe JSON object.');
-        }
+        validateContent(input.content);
 
         values.push(JSON.stringify(input.content));
         fields.push(`content = $${values.length}::jsonb`);
@@ -245,7 +253,7 @@ async function updateMyData(userId, dataId, input) {
 }
 
 /**
- * Kufuta data za mtumiaji mwenyewe tu.
+ * Kufuta data za mmiliki pekee.
  */
 async function deleteMyData(userId, dataId) {
     const result = await pool.query(
