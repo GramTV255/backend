@@ -10,6 +10,7 @@ const app = express();
 // 1. DATA API ROUTES
 // ==================================================
 const dataRoutes = require('./routes/data.routes');
+const authRoutes = require('./routes/auth.routes');
 
 // ==================================================
 // 2. JSON REQUESTS
@@ -112,6 +113,7 @@ app.get('/health/database', async (req, res) => {
 // Ulinzi wa kuingia na umiliki wa data
 // unashughulikiwa kwenye data.routes.js.
 app.use('/api/data', dataRoutes);
+app.use('/api/auth', authRoutes);
 
 // ==================================================
 // 8. NJIA ISIYOPATIKANA
