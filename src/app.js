@@ -54,12 +54,50 @@ app.get('/api', (req, res) => {
 // ==================================================
 // 6. HEALTH CHECK
 // ==================================================
+// ==================================================
+// HEALTH CHECK: SERVER
+// ==================================================
+
 app.get('/health', (req, res) => {
     res.status(200).json({
         success: true,
         status: 'healthy',
         service: 'backend'
     });
+});
+
+
+// ==================================================
+// HEALTH CHECK: DATABASE
+// ==================================================
+
+app.get('/health/database', async (req, res) => {
+    try {
+        const {
+            checkDatabaseConnection
+        } = require('./database/pool');
+
+        const result = await checkDatabaseConnection();
+
+        return res.status(200).json({
+            success: true,
+            status: 'connected',
+            database: 'postgresql',
+            serverTime: result.serverTime
+        });
+
+    } catch (error) {
+        // Usifichue taarifa za siri za database.
+        console.error(
+            'Database health check imeshindwa.'
+        );
+
+        return res.status(503).json({
+            success: false,
+            status: 'unavailable',
+            message: 'Database haipatikani kwa sasa.'
+        });
+    }
 });
 
 // ==================================================
